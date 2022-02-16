@@ -11,4 +11,8 @@ class RemoteDataSource @Inject constructor(
     suspend fun getCurated(
         page: Int
     ) = getResult { pexelsService.getCurated(page = page) }
+
+    suspend fun getCuratedCall(
+        page: Int
+    ) = pexelsService.getCurated(page = page)
 }

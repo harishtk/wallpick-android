@@ -7,5 +7,6 @@ data class CuratedResponse(
     @field:Json(name = "per_page")  val perPage: Int,
     @field:Json(name = "total_results")  val totalResults: Long,
     @field:Json(name = "next_page")  val nextPage: String,
-    @field:Json(name = "photos") val photos: List<Photo>
+    @field:Json(name = "photos") val photos: List<Photo>,
+    @field:Json(name = "error") val error: String?
 )
