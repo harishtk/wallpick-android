@@ -24,7 +24,7 @@ interface PexelsService {
         private const val BASE_URL_PHOTO = "https://api.pexels.com/v1"
         private const val BASE_URL_VIDEO = "https://api.pexels.com/videos"
 
-        private const val DEFAULT_PER_PAGE_LIMIT = 10
+        private const val DEFAULT_PER_PAGE_LIMIT = 30
 
         val apiKey = BuildConfig.SecureProps.getOrDefault("PEXELS_API_KEY", "")
     }

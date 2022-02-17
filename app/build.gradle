@@ -36,6 +36,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+        freeCompilerArgs += ["-Xopt-in=kotlin.RequiresOptIn"]
     }
     buildFeatures {
         compose true
@@ -111,8 +112,8 @@ dependencies {
     implementation "androidx.paging:paging-runtime-ktx:$paging_version"
     implementation("androidx.paging:paging-compose:1.0.0-alpha14")
 
-    def coil_version = "1.2.2"
-    implementation "io.coil-kt:coil:$coil_version"
+    def coil_version = "1.4.0"
+    implementation "io.coil-kt:coil-compose:$coil_version"
 
     // Okhttp
     implementation("com.squareup.okhttp3:okhttp:4.7.2")

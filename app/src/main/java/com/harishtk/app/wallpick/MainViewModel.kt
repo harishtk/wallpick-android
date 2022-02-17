@@ -36,10 +36,16 @@ class MainViewModel @Inject constructor(
             repository.getCuratedFlow(1)
                 .catch { exception -> Timber.e(exception) }
                 .collect { values ->
-                    if (values.succeeded) {
-                        _uiState.value = UiState(Result.Success((values as Result.Success).data.photos))
-                    } else if (values is Result.Error) {
-                        _uiState.value = UiState(error = values.exception)
+                    when {
+                        values.succeeded -> {
+                            _uiState.emit(UiState(photosList = (values as Result.Success).data.photos))
+                        }
+                        values is Result.Error -> {
+                            _uiState.emit(UiState(error = values.exception))
+                        }
+                        else -> {
+                            _uiState.emit(UiState(loading = true))
+                        }
                     }
                 }
         }
@@ -66,6 +72,7 @@ sealed class UiAction {
 }
 
 data class UiState(
-    val photosList: Result<List<Photo>> = Result.Loading,
-    val error: Exception? = null
+    val photosList: List<Photo> = emptyList(),
+    val error: Exception? = null,
+    val loading: Boolean = false
 )
