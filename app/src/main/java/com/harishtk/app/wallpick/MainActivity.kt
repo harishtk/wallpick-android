@@ -6,45 +6,37 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.HorizontalAlignmentLine
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.paging.PagingData
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.items
 import coil.compose.rememberImagePainter
 import coil.transform.RoundedCornersTransformation
-import coil.transform.Transformation
-import com.harishtk.app.wallpick.data.Result
-import com.harishtk.app.wallpick.data.entity.CuratedResponse
 import com.harishtk.app.wallpick.data.entity.Photo
-import com.harishtk.app.wallpick.data.succeeded
 import com.harishtk.app.wallpick.ui.theme.WallPickTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import timber.log.Timber
 
 @AndroidEntryPoint
@@ -107,8 +99,8 @@ fun Greeting(viewModel: MainViewModel) {
         ) {
             Timber.d("$uiState")
 
-            if (uiState.value.loading) {
-                CircularProgressIndicator() /* TODO: extract the indicator */
+            /*if (uiState.value.loading) {
+                CircularProgressIndicator() *//* TODO: extract the indicator *//*
             } else if (uiState.value.error != null) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -132,18 +124,23 @@ fun Greeting(viewModel: MainViewModel) {
                 } else {
                     Text(text = "Something went wrong")
                 }
-            }
+            }*/
+            SearchLayout(
+                uiState = viewModel.uiState,
+                onQueryChanged = viewModel.accept
+            )
+            PhotosList(photos = viewModel.pagingDataFlow)
         }
     }
 }
 
 @Composable
 fun SearchLayout(
-    uiState: State<UiState>? = null,
-    uiAction: ((UiAction) -> Unit)? = null,
+    uiState: StateFlow<UiState>,
+    onQueryChanged: (UiAction.Search) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var typedText by rememberSaveable { mutableStateOf("") }
+    var typedText by rememberSaveable { mutableStateOf(uiState.value.query) }
 
     Surface(
         shape = RoundedCornerShape(25.dp),
@@ -159,7 +156,11 @@ fun SearchLayout(
             if (typedText.isEmpty()) {
                 Text(
                     text = "Search",
-                    style = MaterialTheme.typography.body1.copy(color = MaterialTheme.colors.onSurface.copy(ContentAlpha.medium)),
+                    style = MaterialTheme.typography.body1.copy(
+                        color = MaterialTheme.colors.onSurface.copy(
+                            ContentAlpha.medium
+                        )
+                    ),
                     modifier = Modifier.padding(start = 16.dp)
                 )
             }
@@ -170,14 +171,27 @@ fun SearchLayout(
                     value = typedText,
                     onValueChange = { typed: String ->
                         typedText = typed
+                        onQueryChanged(UiAction.Search(typedText))
                     },
                     /*placeholder = "Type here!",*/
                     singleLine = true,
                     /*cursorColor = MaterialTheme.colors.primary.copy(alpha = 0.5f),*/
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
                         .padding(start = 16.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun PhotosList(photos: Flow<PagingData<Photo>>) {
+    val lazyPhotoItems: LazyPagingItems<Photo> = photos.collectAsLazyPagingItems()
+
+    LazyColumn {
+        items(lazyPhotoItems) { photoItem ->
+            PhotoItem(photo = photoItem!!)
         }
     }
 }
@@ -203,7 +217,7 @@ fun PhotosList(photos: List<Photo>) {
         ),
         state = lazyListState
     ) {
-        item {
+        /*item {
             SearchLayout(
                 modifier = Modifier
                     .graphicsLayer {
@@ -212,7 +226,7 @@ fun PhotosList(photos: List<Photo>) {
                         previousOffset = lazyListState.firstVisibleItemScrollOffset
                     }
             )
-        }
+        }*/
 
         items(photos) { photo ->
             PhotoItem(photo = photo)
@@ -259,23 +273,57 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
                 }
             }
             */
-            Row(
+            /*Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround,
+                horizontalArrangement = Arrangement.End,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
             ) {
-                Divider(modifier = Modifier.fillMaxWidth(0.5f), color = Color.LightGray)
+                Divider(modifier = Modifier.alignBy(HorizontalAlignmentLine(to(Text()))), color = Color.LightGray)
                 Text(
                     text = "~ ${photo.photographer}",
                     style = MaterialTheme.typography.subtitle1.copy(color = Color.DarkGray, fontStyle = FontStyle.Italic),
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp).weight(1f)
+                )
+            }*/
+            ConstraintLayout(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                val (divider, text) = createRefs()
+                Divider(
+                    modifier = Modifier
+                        .constrainAs(divider) {
+                            start.linkTo(parent.start)
+                            top.linkTo(parent.top)
+                            end.linkTo(text.absoluteLeft, margin = 20.dp, goneMargin = 40.dp)
+                            bottom.linkTo(parent.bottom)
+                        },
+                    color = Color.LightGray
+                )
+                Text(
+                    text = "~ ${photo.photographer}",
+                    style = MaterialTheme.typography.subtitle1.copy(
+                        color = Color.DarkGray,
+                        fontStyle = FontStyle.Italic
+                    ),
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .constrainAs(text) {
+                            top.linkTo(parent.top)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                        }
+                        .wrapContentWidth(Alignment.End)
                 )
             }
-            Spacer(modifier = Modifier
-                .height(40.dp)
-                .fillMaxWidth())
+            Spacer(
+                modifier = Modifier
+                    .height(40.dp)
+                    .fillMaxWidth()
+            )
         }
     }
 }
@@ -285,6 +333,6 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
 fun DefaultPreview() {
     WallPickTheme {
         // Greeting("Android")
-        SearchLayout()
+        // SearchLayout()
     }
 }
