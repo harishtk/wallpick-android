@@ -10,15 +10,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
@@ -27,7 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -38,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
+import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
@@ -50,8 +48,9 @@ import com.harishtk.app.wallpick.ui.theme.WallPickTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import timber.log.Timber
-import java.lang.UnsupportedOperationException
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -77,6 +76,10 @@ class MainActivity : ComponentActivity() {
         /*viewModel.curatedPhotosResponse.observe(this) {
             Timber.d("$it")
         }*/
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.favPagingDataFlow.collectLatest { Timber.d("Favorites: $it") }
+        }
     }
 }
 
@@ -155,7 +158,7 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                 onQueryChanged = viewModel.accept
             )
             PhotosList(photos = viewModel.pagingDataFlow) { photo ->
-                val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src.original))
+                val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src?.original!!))
                 try {
                     context.startActivity(downloadIntent)
                     /*if (downloadIntent.resolveActivity(context.packageManager) != null) {
@@ -168,6 +171,7 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                 } catch (e: UnsupportedOperationException) {
                     Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
                 }
+                viewModel.addToFavorite(photo)
             }
         }
     }
@@ -330,7 +334,7 @@ fun PhotoItem(
                 Box(modifier = Modifier.weight(1F)) {
                     Image(
                         painter = rememberImagePainter(
-                            data = photo.src.large2x,
+                            data = photo.src?.large2x!!,
                             builder = {
                                 transformations(RoundedCornersTransformation(0f))
                                 crossfade(true)

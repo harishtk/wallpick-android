@@ -25,6 +25,7 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<UiState>
 
     val pagingDataFlow: Flow<PagingData<Photo>>
+    val favPagingDataFlow: Flow<PagingData<Photo>>
 
     val accept: (UiAction) -> Unit
 
@@ -46,6 +47,10 @@ class MainViewModel @Inject constructor(
                 replay = 1
             )
             .onStart { emit(UiAction.Scroll(currentQuery = lastQueryScrolled)) }
+
+        val favorited = actionStateFlow
+            .filterIsInstance<UiAction.Favorite>()
+            .map { uiAction -> addToFavorite(photo = uiAction.photo) }
 
         pagingDataFlow = searches
             .flatMapLatest { searchRepo(queryString = it.query) }
@@ -71,6 +76,13 @@ class MainViewModel @Inject constructor(
             Timber.d("$action")
             viewModelScope.launch { actionStateFlow.emit(action) }
         }
+
+        favPagingDataFlow = repository.getFavoritePhotos()
+            .cachedIn(viewModelScope)
+    }
+
+    fun addToFavorite(photo: Photo) {
+        viewModelScope.launch { repository.addToFavorites(photo) }
     }
 
     private fun searchRepo(queryString: String): Flow<PagingData<Photo>> =
@@ -86,6 +98,7 @@ class MainViewModel @Inject constructor(
 sealed class UiAction {
     data class Search(val query: String) : UiAction()
     data class Scroll(val currentQuery: String) : UiAction()
+    data class Favorite(val photo: Photo): UiAction()
     object Retry : UiAction()
     object Refresh : UiAction()
 }

@@ -46,7 +46,7 @@ object NetworkModule {
         return Retrofit.Builder()
             .baseUrl(PexelsService.BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            // .addConverterFactory(GsonConverterFactory.create(gson))
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
     }

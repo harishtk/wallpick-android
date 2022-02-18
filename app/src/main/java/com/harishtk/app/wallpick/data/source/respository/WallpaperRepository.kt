@@ -10,6 +10,7 @@ import com.harishtk.app.wallpick.data.entity.Photo
 import com.harishtk.app.wallpick.data.entity.PhotosResponse
 import com.harishtk.app.wallpick.data.performNetworkCall
 import com.harishtk.app.wallpick.data.source.BaseDataSource
+import com.harishtk.app.wallpick.data.source.local.WallpaperDatabase
 import com.harishtk.app.wallpick.data.source.remote.PexelsService
 import com.harishtk.app.wallpick.data.source.remote.PhotosPagingSource
 import com.harishtk.app.wallpick.data.source.remote.RemoteDataSource
@@ -20,6 +21,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -28,6 +31,7 @@ import javax.inject.Inject
 class WallpaperRepository @Inject constructor(
     private val remoteDataSource: RemoteDataSource,
     private val service: PexelsService,
+    private val database: WallpaperDatabase,
     @IODispatcher private val workDispatcher: CoroutineDispatcher
 ) : BaseDataSource() {
 
@@ -49,5 +53,26 @@ class WallpaperRepository @Inject constructor(
             ),
             pagingSourceFactory = { PhotosPagingSource(this, service, query) }
         ).flow
+    }
+
+    fun getFavoritePhotos(): Flow<PagingData<Photo>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = PexelsService.DEFAULT_PER_PAGE_LIMIT,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = { database.favoritesDao().getAllPhotos() }
+        ).flow
+    }
+
+    suspend fun addToFavorites(photo: Photo) = withContext(workDispatcher) {
+        launch {
+            kotlin.runCatching {
+                Timber.d("Favorites: ADD $photo")
+                database.favoritesDao().insertAll(photos = listOf(photo))
+            }.exceptionOrNull()?.let {
+                Timber.e(it, "Failed to add to favorites")
+            }
+        }
     }
 }
