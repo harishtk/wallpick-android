@@ -5,7 +5,7 @@ import com.squareup.moshi.Json
 import java.io.Serializable
 
 data class Photo(
-    @field:Json(name = "id") val id: Long,
+    @field:Json(name = "id") val id: Int,
     @field:Json(name = "width") val width: Int,
     @field:Json(name = "height") val height: Int,
     @field:Json(name = "url") val url: String,
