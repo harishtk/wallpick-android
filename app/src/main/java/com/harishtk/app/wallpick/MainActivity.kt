@@ -1,9 +1,18 @@
 package com.harishtk.app.wallpick
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -18,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,6 +48,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import timber.log.Timber
+import java.lang.UnsupportedOperationException
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -53,7 +64,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    MainScreen(viewModel)
+                    val context = LocalContext.current
+                    MainScreen(context, viewModel)
                 }
             }
         }
@@ -66,7 +78,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(context: Context, viewModel: MainViewModel) {
     val uiState = viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -129,7 +141,21 @@ fun MainScreen(viewModel: MainViewModel) {
                 uiState = viewModel.uiState,
                 onQueryChanged = viewModel.accept
             )
-            PhotosList(photos = viewModel.pagingDataFlow)
+            PhotosList(photos = viewModel.pagingDataFlow) { photo ->
+                val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src.original))
+                try {
+                    context.startActivity(downloadIntent)
+                    /*if (downloadIntent.resolveActivity(context.packageManager) != null) {
+
+                    } else {
+                        throw UnsupportedOperationException("Photo can't be viewed")
+                    }*/
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(context, "Photo can't be viewed", Toast.LENGTH_SHORT).show()
+                } catch (e: UnsupportedOperationException) {
+                    Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 }
@@ -186,12 +212,12 @@ fun SearchLayout(
 }
 
 @Composable
-fun PhotosList(photos: Flow<PagingData<Photo>>) {
+fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
     val lazyPhotoItems: LazyPagingItems<Photo> = photos.collectAsLazyPagingItems()
 
     LazyColumn {
         items(lazyPhotoItems) { photoItem ->
-            PhotoItem(photo = photoItem!!)
+            PhotoItem(photo = photoItem!!, onDownload = onDownload)
         }
 
         lazyPhotoItems.apply {
@@ -260,46 +286,15 @@ fun PhotosList(photos: Flow<PagingData<Photo>>) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PhotosList(photos: List<Photo>) {
-    /*LazyVerticalGrid(
-        cells = GridCells.Adaptive(minSize = 128.dp)
-    ) {
-        items(photos) { photo ->
-            PhotoItem(photo = photo)
-            Spacer(modifier = Modifier.height(60.dp))
-        }
-    }*/
-    val lazyListState = rememberLazyListState()
-    var scrolledY = 0f
-    var previousOffset = 0
+fun PhotoItem(
+    photo: Photo,
+    modifier: Modifier = Modifier,
+    onDownload: (Photo) -> Unit
+) {
 
-    LazyColumn(
-        contentPadding = PaddingValues(
-            bottom = 16.dp
-        ),
-        state = lazyListState
-    ) {
-        /*item {
-            SearchLayout(
-                modifier = Modifier
-                    .graphicsLayer {
-                        scrolledY += lazyListState.firstVisibleItemScrollOffset - previousOffset
-                        translationY = scrolledY * 0.5f
-                        previousOffset = lazyListState.firstVisibleItemScrollOffset
-                    }
-            )
-        }*/
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
-        items(photos) { photo ->
-            PhotoItem(photo = photo)
-        }
-    }
-}
-
-@Composable
-fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.clickable { }
     ) {
@@ -317,7 +312,8 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
                         contentDescription = photo.alt,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1F),
+                            .aspectRatio(1F)
+                            .clickable { expanded = !expanded },
                         contentScale = ContentScale.Crop,
                         alignment = Alignment.TopCenter
                     )
@@ -372,6 +368,25 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
                         }
                         .wrapContentWidth(Alignment.End)
                 )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = slideInVertically(),
+                exit = slideOutVertically()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = { onDownload(photo); expanded = false },
+                        shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        Text(text = "DOWNLOAD ORIGINAL", modifier = Modifier.padding(12.dp))
+                    }
+                }
             }
             Spacer(
                 modifier = Modifier

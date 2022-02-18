@@ -28,8 +28,6 @@ class MainViewModel @Inject constructor(
 
     val accept: (UiAction) -> Unit
 
-    private var _photosPhotosResponse: MutableLiveData<Result<PhotosResponse>> = MutableLiveData()
-
     init {
 
         val lastQuery = savedStateHandle[LAST_SEARCH_QUERY] ?: DEFAULT_QUERY
@@ -92,15 +90,6 @@ class MainViewModel @Inject constructor(
             viewModelScope.launch { actionStateFlow.emit(action) }
         }
     }
-    val photosPhotosResponse: LiveData<Result<PhotosResponse>> = _photosPhotosResponse
-
-    fun fetchCuratedPhotos() = viewModelScope.launch {
-        repository.getCuratedFlow(1)
-            .catch { exception -> Timber.e(exception) }
-            .collect { values ->
-                _photosPhotosResponse.value = values
-            }
-    }
 
     private fun searchRepo(queryString: String): Flow<PagingData<Photo>> =
         repository.getSearchPhotos(queryString)
@@ -125,6 +114,7 @@ data class UiState(
     val query: String = DEFAULT_QUERY,
     val lastQueryScrolled: String = DEFAULT_QUERY,
     val hasNotScrolledForCurrentSearch: Boolean = false,
+    val totalResults: Int = 0,
 )
 
 private const val LAST_SEARCH_QUERY: String = "last_search_query"
