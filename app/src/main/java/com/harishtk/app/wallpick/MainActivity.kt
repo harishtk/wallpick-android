@@ -15,6 +15,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -26,8 +27,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -80,25 +83,35 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(context: Context, viewModel: MainViewModel) {
     val uiState = viewModel.uiState.collectAsState()
+    var topBarVisible by rememberSaveable { mutableStateOf(true) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 contentPadding = PaddingValues(start = 8.dp),
-                backgroundColor = Color.White,
+                backgroundColor = MaterialTheme.colors.surface,
                 elevation = 0.dp
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Browse Wallpapers",
-                        style = MaterialTheme.typography.h1,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black
-                    )
+                AnimatedVisibility(visible = topBarVisible) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_appicon),
+                            contentDescription = "Brand",
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Text(
+                            text = "Browse Wallpapers",
+                            style = MaterialTheme.typography.h1,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colors.secondary,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -170,7 +183,7 @@ fun SearchLayout(
 
     Surface(
         shape = RoundedCornerShape(25.dp),
-        color = Color.LightGray.copy(alpha = 0.5f),
+        color = MaterialTheme.colors.primaryVariant.copy(alpha = 0.5f),
         modifier = Modifier.padding(16.dp)
     ) {
         Box(
@@ -229,15 +242,21 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Searching..", style = MaterialTheme.typography.subtitle2.copy(color = Color.DarkGray),
-                            modifier = Modifier.padding(16.dp))
+                            Text(
+                                "Searching..",
+                                style = MaterialTheme.typography.subtitle2,
+                                modifier = Modifier.padding(16.dp)
+                            )
                             CircularProgressIndicator()
                         }
                     }
                 }
                 loadState.append is LoadState.Loading -> {
                     item {
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text("Loading items...")
                             CircularProgressIndicator()
                         }
@@ -251,11 +270,16 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillParentMaxSize()
                         ) {
-                            Text(text = e.error.localizedMessage!!, modifier = Modifier.padding(16.dp))
+                            Text(
+                                text = e.error.localizedMessage!!,
+                                modifier = Modifier.padding(16.dp)
+                            )
                             Button(
                                 onClick = { retry() },
                                 shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
-                                modifier = Modifier.padding(16.dp)
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .background(color = MaterialTheme.colors.secondary)
                             ) {
                                 Text(text = "RETRY", modifier = Modifier.padding(12.dp))
                             }
@@ -274,6 +298,9 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                             Button(
                                 onClick = { retry() },
                                 shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = MaterialTheme.colors.secondary
+                                ),
                                 modifier = Modifier.padding(16.dp)
                             ) {
                                 Text(text = "RETRY", modifier = Modifier.padding(12.dp))
@@ -382,7 +409,12 @@ fun PhotoItem(
                     Button(
                         onClick = { onDownload(photo); expanded = false },
                         shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
-                        modifier = Modifier.padding(8.dp)
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = MaterialTheme.colors.secondary,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier
+                            .padding(8.dp)
                     ) {
                         Text(text = "DOWNLOAD ORIGINAL", modifier = Modifier.padding(12.dp))
                     }
