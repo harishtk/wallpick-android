@@ -67,24 +67,6 @@ class MainViewModel @Inject constructor(
             initialValue = UiState()
         )
 
-        viewModelScope.launch {
-            /*repository.getCuratedFlow(1)
-                .catch { exception -> Timber.e(exception) }
-                .collect { values ->
-                    when {
-                        values.succeeded -> {
-                            _uiState.emit(UiState(photosList = (values as Result.Success).data.photos))
-                        }
-                        values is Result.Error -> {
-                            _uiState.emit(UiState(error = values.exception))
-                        }
-                        else -> {
-                            _uiState.emit(UiState(loading = true))
-                        }
-                    }
-                }*/
-        }
-
         accept = { action ->
             Timber.d("$action")
             viewModelScope.launch { actionStateFlow.emit(action) }

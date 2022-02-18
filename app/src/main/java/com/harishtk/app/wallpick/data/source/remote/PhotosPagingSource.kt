@@ -19,7 +19,7 @@ class PhotosPagingSource(
         val apiQuery = query
         return try {
             // TODO: move to repository
-            val response = pexelsService.searchPhotos(query, position, params.loadSize)
+            val response = pexelsService.searchPhotos(apiQuery, position, params.loadSize)
             val photos = response.photos
             val nextKey = if (photos.isEmpty()) {
                 null
