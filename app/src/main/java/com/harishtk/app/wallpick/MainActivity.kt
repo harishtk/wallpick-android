@@ -17,15 +17,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
+import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -53,12 +53,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    Greeting(viewModel)
+                    MainScreen(viewModel)
                 }
             }
         }
 
-        viewModel.fetchCuratedPhotos()
+        // viewModel.fetchCuratedPhotos()
         /*viewModel.curatedPhotosResponse.observe(this) {
             Timber.d("$it")
         }*/
@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(viewModel: MainViewModel) {
+fun MainScreen(viewModel: MainViewModel) {
     val uiState = viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -193,6 +193,70 @@ fun PhotosList(photos: Flow<PagingData<Photo>>) {
         items(lazyPhotoItems) { photoItem ->
             PhotoItem(photo = photoItem!!)
         }
+
+        lazyPhotoItems.apply {
+            when {
+                loadState.refresh is LoadState.Loading -> {
+                    item {
+                        Column(
+                            modifier = Modifier.fillParentMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Searching..", style = MaterialTheme.typography.subtitle2.copy(color = Color.DarkGray),
+                            modifier = Modifier.padding(16.dp))
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+                loadState.append is LoadState.Loading -> {
+                    item {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text("Loading items...")
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+                loadState.refresh is LoadState.Error -> {
+                    val e = lazyPhotoItems.loadState.refresh as LoadState.Error
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillParentMaxSize()
+                        ) {
+                            Text(text = e.error.localizedMessage!!, modifier = Modifier.padding(16.dp))
+                            Button(
+                                onClick = { retry() },
+                                shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(text = "RETRY", modifier = Modifier.padding(12.dp))
+                            }
+                        }
+                    }
+
+                }
+                loadState.append is LoadState.Error -> {
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Failed to load data", modifier = Modifier.padding(16.dp))
+                            Button(
+                                onClick = { retry() },
+                                shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(text = "RETRY", modifier = Modifier.padding(12.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -273,20 +337,6 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
                 }
             }
             */
-            /*Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-            ) {
-                Divider(modifier = Modifier.alignBy(HorizontalAlignmentLine(to(Text()))), color = Color.LightGray)
-                Text(
-                    text = "~ ${photo.photographer}",
-                    style = MaterialTheme.typography.subtitle1.copy(color = Color.DarkGray, fontStyle = FontStyle.Italic),
-                    modifier = Modifier.padding(horizontal = 8.dp).weight(1f)
-                )
-            }*/
             ConstraintLayout(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -298,8 +348,10 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
                         .constrainAs(divider) {
                             start.linkTo(parent.start)
                             top.linkTo(parent.top)
-                            end.linkTo(text.absoluteLeft, margin = 20.dp, goneMargin = 40.dp)
+                            end.linkTo(text.start, margin = 4.dp, goneMargin = 40.dp)
                             bottom.linkTo(parent.bottom)
+                            horizontalChainWeight = 0f
+                            width = Dimension.fillToConstraints
                         },
                     color = Color.LightGray
                 )
@@ -314,7 +366,9 @@ fun PhotoItem(photo: Photo, modifier: Modifier = Modifier) {
                         .constrainAs(text) {
                             top.linkTo(parent.top)
                             end.linkTo(parent.end)
+                            start.linkTo(divider.end)
                             bottom.linkTo(parent.bottom)
+                            horizontalChainWeight = 1f
                         }
                         .wrapContentWidth(Alignment.End)
                 )
