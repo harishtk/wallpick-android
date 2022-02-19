@@ -9,9 +9,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,6 +35,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -53,10 +52,8 @@ import com.harishtk.app.wallpick.data.entity.Photo
 import com.harishtk.app.wallpick.ui.screens.FavoritesScreen
 import com.harishtk.app.wallpick.ui.theme.WallPickTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import timber.log.Timber
 
 /**
@@ -94,15 +91,22 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
     var topBarVisible by rememberSaveable { mutableStateOf(true) }
 
     val navController = rememberNavController()
+    navController.addOnDestinationChangedListener { _, destination, _ ->
+        topBarVisible = (destination.route == "home")
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                contentPadding = PaddingValues(start = 8.dp),
-                backgroundColor = MaterialTheme.colors.surface,
-                elevation = 0.dp,
+            AnimatedVisibility(
+                visible = topBarVisible,
+                enter = slideInVertically() + expandVertically(),
+                exit = slideOutVertically() + shrinkVertically()
             ) {
-                AnimatedVisibility(visible = topBarVisible) {
+                TopAppBar(
+                    contentPadding = PaddingValues(start = 8.dp),
+                    backgroundColor = MaterialTheme.colors.surface,
+                    elevation = 0.dp,
+                ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
@@ -119,7 +123,8 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                             fontSize = 22.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colors.secondary,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
                                 .clickable { navController.navigate("favorites") }
                         )
                     }
@@ -244,6 +249,7 @@ fun SearchLayout(
                     /*placeholder = "Type here!",*/
                     singleLine = true,
                     /*cursorColor = MaterialTheme.colors.primary.copy(alpha = 0.5f),*/
+                    textStyle = MaterialTheme.typography.subtitle1.copy(color = Color.White),
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 16.dp)

@@ -1,6 +1,7 @@
 package com.harishtk.app.wallpick.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -22,32 +23,30 @@ import kotlinx.coroutines.flow.FlowCollector
 @Composable
 fun FavoritesScreen(favPagedFlow: Flow<PagingData<Photo>>, navController: NavController) {
 
-    Scaffold(
-        topBar = {
-            TopAppBar {
-                Row(
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack, contentDescription = "Go Back",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    Text(
-                        text = "Recent",
-                        style = MaterialTheme.typography.h1,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colors.secondary,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            }
-        }
+    Column(
+        modifier = Modifier.fillMaxSize()
     ) {
+        Row(
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack, contentDescription = "Go Back",
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Text(
+                text = "Recent",
+                style = MaterialTheme.typography.h1,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colors.secondary,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+
         PhotosList(photos = favPagedFlow) { photo ->
             // TODO: **
         }
