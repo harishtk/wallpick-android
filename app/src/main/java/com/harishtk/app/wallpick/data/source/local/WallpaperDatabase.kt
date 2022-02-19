@@ -5,16 +5,18 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.harishtk.app.wallpick.data.entity.Photo
+import com.harishtk.app.wallpick.data.entity.Src
 import dagger.hilt.android.qualifiers.ApplicationContext
 
 @Database(
-    entities = [Photo::class],
+    entities = [Photo::class, Src::class],
     version = 1,
     exportSchema = false
 )
 abstract class WallpaperDatabase : RoomDatabase() {
 
     abstract fun favoritesDao(): FavoritesDao
+    abstract fun photoSrcDao(): PhotoSrcDao
 
     companion object {
         @Volatile

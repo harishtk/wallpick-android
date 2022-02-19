@@ -36,14 +36,21 @@ import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
+import androidx.paging.filter
+import androidx.paging.map
 import coil.compose.rememberImagePainter
 import coil.transform.RoundedCornersTransformation
 import com.harishtk.app.wallpick.data.entity.Photo
+import com.harishtk.app.wallpick.ui.screens.FavoritesScreen
 import com.harishtk.app.wallpick.ui.theme.WallPickTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +59,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import timber.log.Timber
 
+/**
+ * TODO: refine the theme swatches
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -76,24 +86,21 @@ class MainActivity : ComponentActivity() {
         /*viewModel.curatedPhotosResponse.observe(this) {
             Timber.d("$it")
         }*/
-
-        lifecycleScope.launchWhenCreated {
-            viewModel.favPagingDataFlow.collectLatest { Timber.d("Favorites: $it") }
-        }
     }
 }
 
 @Composable
 fun MainScreen(context: Context, viewModel: MainViewModel) {
-    val uiState = viewModel.uiState.collectAsState()
     var topBarVisible by rememberSaveable { mutableStateOf(true) }
+
+    val navController = rememberNavController()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 contentPadding = PaddingValues(start = 8.dp),
                 backgroundColor = MaterialTheme.colors.surface,
-                elevation = 0.dp
+                elevation = 0.dp,
             ) {
                 AnimatedVisibility(visible = topBarVisible) {
                     Row(
@@ -113,22 +120,41 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colors.secondary,
                             modifier = Modifier.padding(horizontal = 16.dp)
+                                .clickable { navController.navigate("favorites") }
                         )
                     }
                 }
             }
         }
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth()
-        ) {
-            Timber.d("$uiState")
+        NavHost(navController = navController, startDestination = "home") {
+            composable("home") { Home(
+                context = context,
+                viewModel = viewModel
+            ) }
+            composable("favorites") {
+                FavoritesScreen(
+                    favPagedFlow = viewModel.favPagingDataFlow,
+                    navController = navController
+                )
+            }
+        }
+    }
+}
 
-            /*if (uiState.value.loading) {
-                CircularProgressIndicator() *//* TODO: extract the indicator *//*
+@Composable
+fun Home(context: Context, viewModel: MainViewModel) {
+    val uiState = viewModel.uiState.collectAsState()
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxHeight()
+            .fillMaxWidth()
+    ) {
+        Timber.d("$uiState")
+
+        /*if (uiState.value.loading) {
+            CircularProgressIndicator() *//* TODO: extract the indicator *//*
             } else if (uiState.value.error != null) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -153,26 +179,25 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                     Text(text = "Something went wrong")
                 }
             }*/
-            SearchLayout(
-                uiState = viewModel.uiState,
-                onQueryChanged = viewModel.accept
-            )
-            PhotosList(photos = viewModel.pagingDataFlow) { photo ->
-                val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src?.original!!))
-                try {
-                    context.startActivity(downloadIntent)
-                    /*if (downloadIntent.resolveActivity(context.packageManager) != null) {
+        SearchLayout(
+            uiState = viewModel.uiState,
+            onQueryChanged = viewModel.accept
+        )
+        PhotosList(photos = viewModel.pagingDataFlow) { photo ->
+            val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src?.original!!))
+            try {
+                context.startActivity(downloadIntent)
+                /*if (downloadIntent.resolveActivity(context.packageManager) != null) {
 
-                    } else {
-                        throw UnsupportedOperationException("Photo can't be viewed")
-                    }*/
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(context, "Photo can't be viewed", Toast.LENGTH_SHORT).show()
-                } catch (e: UnsupportedOperationException) {
-                    Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
-                }
-                viewModel.addToFavorite(photo)
+                } else {
+                    throw UnsupportedOperationException("Photo can't be viewed")
+                }*/
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(context, "Photo can't be viewed", Toast.LENGTH_SHORT).show()
+            } catch (e: UnsupportedOperationException) {
+                Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
             }
+            viewModel.addToFavorite(photo)
         }
     }
 }
@@ -251,7 +276,7 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                                 style = MaterialTheme.typography.subtitle2,
                                 modifier = Modifier.padding(16.dp)
                             )
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(color = MaterialTheme.colors.secondary)
                         }
                     }
                 }
@@ -262,7 +287,7 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Loading items...")
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(color = MaterialTheme.colors.secondary)
                         }
                     }
                 }

@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.io.IOException
 import java.lang.Exception
 import javax.inject.Inject
 
@@ -78,6 +79,16 @@ class MainViewModel @Inject constructor(
         }
 
         favPagingDataFlow = repository.getFavoritePhotos()
+            .map { pagingData: PagingData<Photo> ->
+                pagingData.map { photo ->
+                    try {
+                        photo.src = repository.getPhotoSrc(photo.id).first()
+                        photo
+                    } catch (e: IOException) {
+                        photo
+                    }
+                }
+            }
             .cachedIn(viewModelScope)
     }
 

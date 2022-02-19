@@ -1,8 +1,6 @@
 package com.harishtk.app.wallpick.data.entity
 
-import androidx.room.Entity
-import androidx.room.Ignore
-import androidx.room.PrimaryKey
+import androidx.room.*
 import com.google.gson.annotations.SerializedName
 import com.squareup.moshi.Json
 import java.io.Serializable
@@ -20,9 +18,10 @@ data class Photo(
     @field:Json(name = "liked") val liked: Boolean,
     @field:Json(name = "alt") val alt: String,
 ): Serializable {
-    @Ignore @field:Json(name = "src") val src: Src? = null
+    @Ignore @field:Json(name = "src") var src: Src? = null
 }
 
+@Entity(tableName = "src", foreignKeys = [ForeignKey(entity = Photo::class, parentColumns = arrayOf("id"), childColumns = arrayOf("photo_id"))])
 data class Src(
     @field:Json(name = "original") val original: String,
     @field:Json(name = "large2x") val large2x: String,
@@ -32,4 +31,7 @@ data class Src(
     @field:Json(name = "portrait") val portrait: String,
     @field:Json(name = "landscape") val landscape: String,
     @field:Json(name = "tiny") val tiny: String
-): Serializable
+): Serializable {
+    @PrimaryKey var id: Long? = null
+    @ColumnInfo(name = "photo_id") var photoId: Long? = null
+}
