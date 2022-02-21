@@ -26,7 +26,6 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<UiState>
 
     val pagingDataFlow: Flow<PagingData<Photo>>
-    val favPagingDataFlow: Flow<PagingData<Photo>>
 
     val accept: (UiAction) -> Unit
 
@@ -77,19 +76,6 @@ class MainViewModel @Inject constructor(
             Timber.d("$action")
             viewModelScope.launch { actionStateFlow.emit(action) }
         }
-
-        favPagingDataFlow = repository.getFavoritePhotos()
-            .map { pagingData: PagingData<Photo> ->
-                pagingData.map { photo ->
-                    try {
-                        photo.src = repository.getPhotoSrc(photo.id).first()
-                        photo
-                    } catch (e: IOException) {
-                        photo
-                    }
-                }
-            }
-            .cachedIn(viewModelScope)
     }
 
     fun addToFavorite(photo: Photo) {

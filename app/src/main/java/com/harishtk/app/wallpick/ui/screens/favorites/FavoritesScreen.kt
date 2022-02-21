@@ -1,4 +1,4 @@
-package com.harishtk.app.wallpick.ui.screens
+package com.harishtk.app.wallpick.ui.screens.favorites
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,15 +13,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.PagingData
 import com.harishtk.app.wallpick.PhotosList
 import com.harishtk.app.wallpick.data.entity.Photo
+import com.harishtk.app.wallpick.ui.screens.favorites.FavoriteViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 
 @Composable
-fun FavoritesScreen(favPagedFlow: Flow<PagingData<Photo>>, navController: NavController) {
+fun FavoritesScreen(navController: NavController, viewModel: FavoriteViewModel = hiltViewModel()) {
+
+    val favPagedFlow = viewModel.pagingFavoritePhotosFlow
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -47,8 +52,11 @@ fun FavoritesScreen(favPagedFlow: Flow<PagingData<Photo>>, navController: NavCon
             )
         }
 
-        PhotosList(photos = favPagedFlow) { photo ->
-            // TODO: **
-        }
+        PhotosList(photos = favPagedFlow, onDownload = { photo ->
+
+        },
+        onClickImage = { photo ->
+
+        })
     }
 }

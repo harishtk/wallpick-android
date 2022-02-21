@@ -29,7 +29,7 @@ interface PexelsService {
     @GET("/v1/photos/{id}")
     suspend fun getPhoto(
         @Path(value = "id", encoded = true) id: String
-    ): Photo
+    ): Response<Photo>
 
     @GET("/videos/search")
     suspend fun searchVideos(

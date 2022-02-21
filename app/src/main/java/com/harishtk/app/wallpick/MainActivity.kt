@@ -1,5 +1,6 @@
 package com.harishtk.app.wallpick
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -8,7 +9,6 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -33,36 +33,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import androidx.lifecycle.lifecycleScope
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
-import androidx.paging.filter
-import androidx.paging.map
 import coil.compose.rememberImagePainter
 import coil.transform.RoundedCornersTransformation
 import com.harishtk.app.wallpick.data.entity.Photo
-import com.harishtk.app.wallpick.ui.screens.FavoritesScreen
+import com.harishtk.app.wallpick.ui.screens.detail.DetailScreen
+import com.harishtk.app.wallpick.ui.screens.detail.DetailViewModel
+import com.harishtk.app.wallpick.ui.screens.favorites.FavoritesScreen
 import com.harishtk.app.wallpick.ui.theme.WallPickTheme
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
-import timber.log.Timber
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.components.ActivityComponent
+import kotlinx.coroutines.flow.Flow
 
 /**
  * TODO: refine the theme swatches
+ * TODO: Use work manager to notify the user for daily suggesstions and cache them in local db
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: MainViewModel by viewModels()
+    @EntryPoint
+    @InstallIn(ActivityComponent::class)
+    interface ViewModelFactoryProvider {
+        fun detailViewModelFactory(): DetailViewModel.Factory
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,7 +83,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background
                 ) {
                     val context = LocalContext.current
-                    MainScreen(context, viewModel)
+                    MainScreen(context)
                 }
             }
         }
@@ -87,12 +96,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(context: Context, viewModel: MainViewModel) {
+fun MainScreen(context: Context) {
     var topBarVisible by rememberSaveable { mutableStateOf(true) }
 
     val navController = rememberNavController()
     navController.addOnDestinationChangedListener { _, destination, _ ->
-        topBarVisible = (destination.route == "home")
+        topBarVisible = (destination.route == Screen.Home.route)
     }
 
     Scaffold(
@@ -105,7 +114,7 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                 TopAppBar(
                     contentPadding = PaddingValues(start = 8.dp),
                     backgroundColor = MaterialTheme.colors.surface,
-                    elevation = 0.dp,
+                    elevation = 0.dp
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -125,30 +134,40 @@ fun MainScreen(context: Context, viewModel: MainViewModel) {
                             color = MaterialTheme.colors.secondary,
                             modifier = Modifier
                                 .padding(horizontal = 16.dp)
-                                .clickable { navController.navigate("favorites") }
+                                .clickable { navController.navigate(Screen.Favorites.route) }
                         )
                     }
                 }
             }
         }
     ) {
-        NavHost(navController = navController, startDestination = "home") {
-            composable("home") { Home(
-                context = context,
-                viewModel = viewModel
-            ) }
-            composable("favorites") {
-                FavoritesScreen(
-                    favPagedFlow = viewModel.favPagingDataFlow,
+        NavHost(navController = navController, startDestination = DEFAULT_NAV_HOST) {
+            composable(Screen.Home.route) {
+                Home(
+                    context = context,
                     navController = navController
                 )
+            }
+            composable(Screen.Favorites.route) {
+                FavoritesScreen(
+                    navController = navController
+                )
+            }
+            composable(
+                Screen.Detail.route + "/{photoId}",
+                arguments = listOf(navArgument(Screen.Detail.ARG_PHOTO_ID) {
+                    type = NavType.IntType
+                })
+            ) {
+                val photoId = it.arguments?.get(Screen.Detail.ARG_PHOTO_ID)!! as Int
+                DetailScreen(navController = navController, detailViewModel(photoId = photoId))
             }
         }
     }
 }
 
 @Composable
-fun Home(context: Context, viewModel: MainViewModel) {
+fun Home(context: Context, navController: NavController, viewModel: MainViewModel = hiltViewModel()) {
     val uiState = viewModel.uiState.collectAsState()
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -156,60 +175,41 @@ fun Home(context: Context, viewModel: MainViewModel) {
             .fillMaxHeight()
             .fillMaxWidth()
     ) {
-        Timber.d("$uiState")
+        // Timber.d("$uiState")
 
-        /*if (uiState.value.loading) {
-            CircularProgressIndicator() *//* TODO: extract the indicator *//*
-            } else if (uiState.value.error != null) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Failed to load data", modifier = Modifier.padding(16.dp))
-                    Button(
-                        onClick = { viewModel.accept(UiAction.Retry) },
-                        shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(text = "RETRY", modifier = Modifier.padding(12.dp))
-                    }
-                }
-            } else {
-                if (uiState.value.photosList.isNotEmpty()) {
-                    PhotosList(photos = uiState.value.photosList)
-                } else {
-                    Text(text = "Something went wrong")
-                }
-            }*/
         SearchLayout(
-            uiState = viewModel.uiState,
+            uiState = uiState,
             onQueryChanged = viewModel.accept
         )
-        PhotosList(photos = viewModel.pagingDataFlow) { photo ->
-            val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src?.original!!))
-            try {
-                context.startActivity(downloadIntent)
-                /*if (downloadIntent.resolveActivity(context.packageManager) != null) {
+        PhotosList(
+            photos = viewModel.pagingDataFlow,
+            onDownload = { photo ->
+                val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src?.original!!))
+                try {
+                    context.startActivity(downloadIntent)
+                    /*if (downloadIntent.resolveActivity(context.packageManager) != null) {
 
                 } else {
                     throw UnsupportedOperationException("Photo can't be viewed")
                 }*/
-            } catch (e: ActivityNotFoundException) {
-                Toast.makeText(context, "Photo can't be viewed", Toast.LENGTH_SHORT).show()
-            } catch (e: UnsupportedOperationException) {
-                Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(context, "Photo can't be viewed", Toast.LENGTH_SHORT).show()
+                } catch (e: UnsupportedOperationException) {
+                    Toast.makeText(context, e.localizedMessage, Toast.LENGTH_SHORT).show()
+                }
+                viewModel.addToFavorite(photo)
+            },
+            onClickImage = { photo ->
+                navController.navigate(Screen.Detail.route + "/${photo.id}")
+                viewModel.addToFavorite(photo)
             }
-            viewModel.addToFavorite(photo)
-        }
+        )
     }
 }
 
 @Composable
 fun SearchLayout(
-    uiState: StateFlow<UiState>,
+    uiState: State<UiState>,
     onQueryChanged: (UiAction.Search) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -260,12 +260,16 @@ fun SearchLayout(
 }
 
 @Composable
-fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
+fun PhotosList(
+    photos: Flow<PagingData<Photo>>,
+    onDownload: (Photo) -> Unit,
+    onClickImage: (Photo) -> Unit
+) {
     val lazyPhotoItems: LazyPagingItems<Photo> = photos.collectAsLazyPagingItems()
 
     LazyColumn {
         items(lazyPhotoItems) { photoItem ->
-            PhotoItem(photo = photoItem!!, onDownload = onDownload)
+            PhotoItem(photo = photoItem!!, onDownload = onDownload, onClickImage = onClickImage)
         }
 
         lazyPhotoItems.apply {
@@ -314,7 +318,6 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                                 shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
                                 modifier = Modifier
                                     .padding(16.dp)
-                                    .background(color = MaterialTheme.colors.secondary)
                             ) {
                                 Text(text = "RETRY", modifier = Modifier.padding(12.dp))
                             }
@@ -333,9 +336,6 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
                             Button(
                                 onClick = { retry() },
                                 shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = MaterialTheme.colors.secondary
-                                ),
                                 modifier = Modifier.padding(16.dp)
                             ) {
                                 Text(text = "RETRY", modifier = Modifier.padding(12.dp))
@@ -352,6 +352,7 @@ fun PhotosList(photos: Flow<PagingData<Photo>>, onDownload: (Photo) -> Unit) {
 fun PhotoItem(
     photo: Photo,
     modifier: Modifier = Modifier,
+    onClickImage: (Photo) -> Unit,
     onDownload: (Photo) -> Unit
 ) {
 
@@ -375,7 +376,10 @@ fun PhotoItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1F)
-                            .clickable { expanded = !expanded },
+                            .clickable {
+                                /*expanded = !expanded*/
+                                onClickImage(photo)
+                            },
                         contentScale = ContentScale.Crop,
                         alignment = Alignment.TopCenter
                     )
@@ -445,7 +449,6 @@ fun PhotoItem(
                         onClick = { onDownload(photo); expanded = false },
                         shape = RoundedCornerShape(15.dp, 20.dp, 35.dp, 35.dp),
                         colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.secondary,
                             contentColor = Color.White
                         ),
                         modifier = Modifier
@@ -472,3 +475,24 @@ fun DefaultPreview() {
         // SearchLayout()
     }
 }
+
+@Composable
+fun detailViewModel(photoId: Int): DetailViewModel {
+    val factory = EntryPointAccessors.fromActivity(
+        LocalContext.current as Activity,
+        MainActivity.ViewModelFactoryProvider::class.java
+    ).detailViewModelFactory()
+
+    return viewModel(factory = DetailViewModel.provideFactory(factory, photoId = photoId))
+}
+
+sealed class Screen(val route: String) {
+    object Home : Screen("home")
+    object Favorites : Screen("favorites")
+    object Detail : Screen("detail") {
+        // const val ARG_PHOTO_ID = "com.harishtk.app.wallpick.args.PHOTO_ID"
+        const val ARG_PHOTO_ID = "photoId"
+    }
+}
+
+val DEFAULT_NAV_HOST: String = Screen.Home.route

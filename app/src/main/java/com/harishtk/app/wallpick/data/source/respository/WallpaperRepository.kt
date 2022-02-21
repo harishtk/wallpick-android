@@ -56,6 +56,12 @@ class WallpaperRepository @Inject constructor(
         ).flow
     }
 
+    fun getPhotoById(id: Int): Flow<Result<Photo>> = flow {
+        emit(Result.Loading)
+        // TODO: This statement doesn't look good.  Works anyways
+        emit(getResult { remoteDataSource.getPhoto(id = id) })
+    }.flowOn(workDispatcher)
+
     fun getFavoritePhotos(): Flow<PagingData<Photo>> {
         return Pager(
             config = PagingConfig(
