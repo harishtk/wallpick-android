@@ -17,6 +17,7 @@ data class Photo(
     @field:Json(name = "avg_color") val avgColor: String,
     @field:Json(name = "liked") val liked: Boolean,
     @field:Json(name = "alt") val alt: String,
+    var totalResults: Int = 0,
 ): Serializable {
     @Ignore @field:Json(name = "src") var src: Src? = null
 }

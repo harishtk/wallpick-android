@@ -5,6 +5,7 @@ import androidx.paging.PagingState
 import com.harishtk.app.wallpick.data.entity.Photo
 import com.harishtk.app.wallpick.data.source.respository.WallpaperRepository
 import retrofit2.HttpException
+import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 
@@ -20,7 +21,9 @@ class PhotosPagingSource(
         return try {
             // TODO: move to repository
             val response = pexelsService.searchPhotos(apiQuery, position, params.loadSize)
-            val photos = response.photos
+            val photos: List<Photo> = response.photos.map { photo ->
+                photo.totalResults = response.totalResults.toInt(); photo
+            }
             val nextKey = if (photos.isEmpty()) {
                 null
             } else {

@@ -29,6 +29,8 @@ class MainViewModel @Inject constructor(
 
     val accept: (UiAction) -> Unit
 
+    val totalResults = MutableStateFlow(0)
+
     init {
 
         val lastQuery = savedStateHandle[LAST_SEARCH_QUERY] ?: DEFAULT_QUERY
@@ -59,12 +61,15 @@ class MainViewModel @Inject constructor(
         uiState = combine(
             searches,
             queriesScrolled,
-            ::Pair
-        ).map { (search, scroll) ->
+            totalResults,
+            ::Triple
+        ).map { (search, scroll, totalResults) ->
+            Timber.d("Total results: $totalResults")
             UiState(
                 query = search.query,
                 lastQueryScrolled = scroll.currentQuery,
-                hasNotScrolledForCurrentSearch = search.query != scroll.currentQuery
+                hasNotScrolledForCurrentSearch = search.query != scroll.currentQuery,
+                totalResults = totalResults
             )
         }.stateIn(
             scope = viewModelScope,
@@ -83,7 +88,9 @@ class MainViewModel @Inject constructor(
     }
 
     private fun searchRepo(queryString: String): Flow<PagingData<Photo>> =
-        repository.getSearchPhotos(queryString)
+        repository.getSearchPhotos(queryString).map {
+            it.map { photo -> totalResults.value = photo.totalResults;photo }
+        }
 
     override fun onCleared() {
         savedStateHandle[LAST_SEARCH_QUERY] = uiState.value.query

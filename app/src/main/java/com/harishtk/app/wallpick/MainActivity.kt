@@ -12,9 +12,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
@@ -59,10 +62,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * TODO: refine the theme swatches
- * TODO: Use work manager to notify the user for daily suggesstions and cache them in local db
+ * TODO: Use work manager to notify the user for daily suggestions and cache them in local db
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -216,46 +220,69 @@ fun SearchLayout(
     var typedText by rememberSaveable { mutableStateOf(uiState.value.query) }
 
     Surface(
-        shape = RoundedCornerShape(25.dp),
-        color = MaterialTheme.colors.primaryVariant.copy(alpha = 0.5f),
-        modifier = Modifier.padding(16.dp)
+        // shape = RoundedCornerShape(25.dp),
+        //color = MaterialTheme.colors.primaryVariant.copy(alpha = 0.5f),
+        modifier = modifier.padding(16.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .requiredHeight(40.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
 
-            if (typedText.isEmpty()) {
-                Text(
-                    text = "Search",
-                    style = MaterialTheme.typography.body1.copy(
-                        color = MaterialTheme.colors.onSurface.copy(
-                            ContentAlpha.medium
-                        )
+        Column {
+            Box(
+                modifier = Modifier
+                    .requiredHeight(40.dp)
+                    .background(
+                        color = MaterialTheme.colors.primaryVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(25.dp)
                     ),
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.CenterStart
             ) {
-                BasicTextField(
-                    value = typedText,
-                    onValueChange = { typed: String ->
-                        typedText = typed
-                        onQueryChanged(UiAction.Search(typedText))
-                    },
-                    /*placeholder = "Type here!",*/
-                    singleLine = true,
-                    /*cursorColor = MaterialTheme.colors.primary.copy(alpha = 0.5f),*/
-                    textStyle = MaterialTheme.typography.subtitle1.copy(color = Color.White),
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 16.dp)
-                )
+
+                if (typedText.isEmpty()) {
+                    Text(
+                        text = "Search",
+                        style = MaterialTheme.typography.body1.copy(
+                            color = MaterialTheme.colors.onSurface.copy(
+                                ContentAlpha.medium
+                            )
+                        ),
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    BasicTextField(
+                        value = typedText,
+                        onValueChange = { typed: String ->
+                            typedText = typed
+                            onQueryChanged(UiAction.Search(typedText))
+                        },
+                        /*placeholder = "Type here!",*/
+                        singleLine = true,
+                        /*cursorColor = MaterialTheme.colors.primary.copy(alpha = 0.5f),*/
+                        textStyle = MaterialTheme.typography.subtitle1.copy(color = Color.White),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 16.dp)
+                    )
+                }
+            }
+            if (!uiState.value.loading && uiState.value.totalResults != 0) {
+                Row(
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text(
+                        text = "About ${uiState.value.totalResults} results!",
+                        style = MaterialTheme.typography.body1.copy(
+                            color = MaterialTheme.colors.onSurface.copy(
+                                ContentAlpha.medium
+                            )
+                        ),
+                        modifier = Modifier.padding(start = 8.dp, top = 8.dp, end = 8.dp)
+                    )
+                }
             }
         }
+
     }
 }
 
@@ -266,8 +293,11 @@ fun PhotosList(
     onClickImage: (Photo) -> Unit
 ) {
     val lazyPhotoItems: LazyPagingItems<Photo> = photos.collectAsLazyPagingItems()
+    val listState = rememberLazyListState()
 
-    LazyColumn {
+    LazyColumn(
+        state = listState
+    ) {
         items(lazyPhotoItems) { photoItem ->
             PhotoItem(photo = photoItem!!, onDownload = onDownload, onClickImage = onClickImage)
         }
@@ -343,6 +373,20 @@ fun PhotosList(
                         }
                     }
                 }
+                loadState.append is LoadState.NotLoading && loadState.append.endOfPaginationReached -> {
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(text = "Looks like you've reached the end!", modifier = Modifier.padding(16.dp))
+                            Spacer(modifier = Modifier
+                                .height(60.dp)
+                                .fillMaxWidth())
+                        }
+                    }
+                }
             }
         }
     }
@@ -366,7 +410,7 @@ fun PhotoItem(
                 Box(modifier = Modifier.weight(1F)) {
                     Image(
                         painter = rememberImagePainter(
-                            data = photo.src?.large2x!!,
+                            data = photo.src?.large!!,
                             builder = {
                                 transformations(RoundedCornersTransformation(0f))
                                 crossfade(true)
