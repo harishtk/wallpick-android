@@ -10,24 +10,32 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,13 +64,16 @@ import com.harishtk.app.wallpick.ui.screens.detail.DetailScreen
 import com.harishtk.app.wallpick.ui.screens.detail.DetailViewModel
 import com.harishtk.app.wallpick.ui.screens.favorites.FavoritesScreen
 import com.harishtk.app.wallpick.ui.theme.WallPickTheme
+import com.harishtk.app.wallpick.ui.widget.*
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import java.util.*
 
 /**
  * TODO: refine the theme swatches
@@ -171,7 +182,11 @@ fun MainScreen(context: Context) {
 }
 
 @Composable
-fun Home(context: Context, navController: NavController, viewModel: MainViewModel = hiltViewModel()) {
+fun Home(
+    context: Context,
+    navController: NavController,
+    viewModel: MainViewModel = hiltViewModel()
+) {
     val uiState = viewModel.uiState.collectAsState()
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -186,7 +201,9 @@ fun Home(context: Context, navController: NavController, viewModel: MainViewMode
             onQueryChanged = viewModel.accept
         )
         PhotosList(
+            uiState = uiState,
             photos = viewModel.pagingDataFlow,
+            uiActions = viewModel.accept,
             onDownload = { photo ->
                 val downloadIntent = Intent(Intent.ACTION_VIEW, Uri.parse(photo.src?.original!!))
                 try {
@@ -211,6 +228,50 @@ fun Home(context: Context, navController: NavController, viewModel: MainViewMode
     }
 }
 
+const val AutoCompleteBoxTag = "AutoCompleteBoxTag"
+
+@Composable
+fun <T : AutoCompleteEntity> AutoCompleteBox(
+    items: List<T>,
+    itemContent: @Composable (T) -> Unit,
+    content: @Composable AutoCompleteScope<T>.() -> Unit
+) {
+    val autoCompleteState = remember {
+        AutoCompleteState(startItems = items)
+    }
+
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        autoCompleteState.content()
+        AnimatedVisibility(visible = autoCompleteState.isSearching) {
+            LazyColumn(
+                modifier = Modifier.autoComplete(autoCompleteState),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                items(autoCompleteState.filteredItems) { item ->
+                    Box(modifier = Modifier.clickable { autoCompleteState.selectItem(item) }) {
+                        itemContent(item)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ValueAutoCompleteItem(item: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = item, style = MaterialTheme.typography.subtitle2)
+    }
+}
+
 @Composable
 fun SearchLayout(
     uiState: State<UiState>,
@@ -219,6 +280,19 @@ fun SearchLayout(
 ) {
     var typedText by rememberSaveable { mutableStateOf(uiState.value.query) }
 
+    val items = listOf(
+        "Paulo Pereira",
+        "Daenerys Targaryen",
+        "Jon Snow",
+        "Sansa Stark",
+    )
+    val autoCompleteEntities = items.asAutoCompleteEntities(
+        filter = { item, query ->
+            item.lowercase(Locale.getDefault())
+                .startsWith(query.lowercase(Locale.getDefault()))
+        }
+    )
+
     Surface(
         // shape = RoundedCornerShape(25.dp),
         //color = MaterialTheme.colors.primaryVariant.copy(alpha = 0.5f),
@@ -226,6 +300,23 @@ fun SearchLayout(
     ) {
 
         Column {
+            /*Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val view = LocalView.current
+                SearchBar(
+                    value = typedText,
+                    label = "Search",
+                    onValueChanged = { typedQuery ->
+                        typedText = typedQuery
+                    },
+                    onClearClick = {
+                        typedText = ""
+                        onQueryChanged(UiAction.Search(""))
+                    },
+                    onDoneActionClick = { view.clearFocus() }
+                )
+            }*/
             Box(
                 modifier = Modifier
                     .requiredHeight(40.dp)
@@ -247,30 +338,103 @@ fun SearchLayout(
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 }
-                Row(
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    BasicTextField(
-                        value = typedText,
-                        onValueChange = { typed: String ->
-                            typedText = typed
-                            onQueryChanged(UiAction.Search(typedText))
-                        },
-                        /*placeholder = "Type here!",*/
-                        singleLine = true,
-                        /*cursorColor = MaterialTheme.colors.primary.copy(alpha = 0.5f),*/
-                        textStyle = MaterialTheme.typography.subtitle1.copy(color = Color.White),
+
+                AutoCompleteBox(items = autoCompleteEntities, itemContent = {
+                    ValueAutoCompleteItem(item = it.value)
+                }) {
+                    var value by remember { mutableStateOf("") }
+                    val view = LocalView.current
+
+                    onItemSelected { item ->
+                        value = item.value
+                        filter(value)
+                        view.clearFocus()
+                    }
+                    ConstraintLayout(
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 16.dp)
-                    )
+                            .fillMaxWidth()
+                    ) {
+                        val focusRequester = FocusRequester()
+                        val (ed, clearBtn, autoCompleteBox) = createRefs()
+                        BasicTextField(
+                            value = typedText,
+                            onValueChange = { typed: String ->
+                                typedText = typed
+                                filter(typedText)
+                                onQueryChanged(UiAction.Search(typedText))
+                            },
+                            /*placeholder = "Type here!",*/
+                            singleLine = true,
+                            /*cursorColor = MaterialTheme.colors.primary.copy(alpha = 0.5f),*/
+                            textStyle = MaterialTheme.typography.subtitle1.copy(color = Color.White),
+                            modifier = Modifier
+                                .constrainAs(ed) {
+                                    start.linkTo(parent.start)
+                                    top.linkTo(parent.top)
+                                    if (uiState.value.query.isNotEmpty()) {
+                                        end.linkTo(clearBtn.start)
+                                    } else {
+                                        end.linkTo(parent.end)
+                                    }
+                                    bottom.linkTo(parent.bottom)
+                                    width = Dimension.fillToConstraints
+                                }
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { focusState ->
+                                    // isSearching = focusState.isFocused
+                                }
+                                .padding(start = 16.dp)
+                        )
+
+                        if (uiState.value.query.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .constrainAs(clearBtn) {
+                                        end.linkTo(parent.end)
+                                        top.linkTo(parent.top)
+                                        bottom.linkTo(parent.bottom)
+                                        start.linkTo(ed.end)
+                                        width = Dimension.wrapContent
+                                    }
+                                //.padding(end = 8.dp)
+
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        typedText = ""
+                                        onQueryChanged(
+                                            UiAction.Search(
+                                                typedText
+                                            )
+                                        )
+                                        focusRequester.requestFocus()
+                                        filter(typedText)
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Clear,
+                                        contentDescription = "Clear Search",
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .background(
+                                                color = MaterialTheme.colors.primaryVariant,
+                                                shape = CircleShape
+                                            )
+                                            .padding(2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
+
             }
-            if (!uiState.value.loading && uiState.value.totalResults != 0) {
+            if (!uiState.value.loading && uiState.value.query.isNotEmpty() && uiState.value.totalResults != 0) {
                 Row(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     Text(
+                        //text = "Showing ${uiState.value.totalResults} results for \"${uiState.value.query}\"!",
                         text = "About ${uiState.value.totalResults} results!",
                         style = MaterialTheme.typography.body1.copy(
                             color = MaterialTheme.colors.onSurface.copy(
@@ -288,7 +452,9 @@ fun SearchLayout(
 
 @Composable
 fun PhotosList(
+    uiState: State<UiState>,
     photos: Flow<PagingData<Photo>>,
+    uiActions: ((UiAction) -> Unit)? = null,
     onDownload: (Photo) -> Unit,
     onClickImage: (Photo) -> Unit
 ) {
@@ -332,6 +498,7 @@ fun PhotosList(
                     }
                 }
                 loadState.refresh is LoadState.Error -> {
+                    uiActions?.invoke(UiAction.UpdateTotalResults(totalResults = 0))
                     val e = lazyPhotoItems.loadState.refresh as LoadState.Error
                     item {
                         Column(
@@ -373,17 +540,47 @@ fun PhotosList(
                         }
                     }
                 }
-                loadState.append is LoadState.NotLoading && loadState.append.endOfPaginationReached -> {
+                loadState.append is LoadState.NotLoading
+                        && loadState.append.endOfPaginationReached
+                        && uiState.value.query.isNotEmpty() -> {
                     item {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(text = "Looks like you've reached the end!", modifier = Modifier.padding(16.dp))
-                            Spacer(modifier = Modifier
-                                .height(60.dp)
-                                .fillMaxWidth())
+                            Text(
+                                text = "Looks like you've reached the end!",
+                                modifier = Modifier.padding(16.dp)
+                            )
+                            Spacer(
+                                modifier = Modifier
+                                    .height(60.dp)
+                                    .fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+                uiState.value.query.isEmpty() -> {
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillParentMaxSize()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Image(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search Promoter"
+                                )
+                                Text(
+                                    text = "Search something!",
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -392,6 +589,7 @@ fun PhotosList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PhotoItem(
     photo: Photo,
@@ -420,15 +618,16 @@ fun PhotoItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1F)
-                            .clickable {
-                                /*expanded = !expanded*/
-                                onClickImage(photo)
-                            },
+                            .combinedClickable(
+                                onClick = { onClickImage(photo) },
+                                onLongClick = { expanded = !expanded }
+                            ),
                         contentScale = ContentScale.Crop,
                         alignment = Alignment.TopCenter
                     )
                 }
             }
+
             /*Row(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -20,6 +20,13 @@ class PhotosPagingSource(
         val apiQuery = query
         return try {
             // TODO: move to repository
+                if (apiQuery.isEmpty()) {
+                    return LoadResult.Page(
+                        data = emptyList(),
+                        prevKey = null,
+                        nextKey = null
+                    )
+                }
             val response = pexelsService.searchPhotos(apiQuery, position, params.loadSize)
             val photos: List<Photo> = response.photos.map { photo ->
                 photo.totalResults = response.totalResults.toInt(); photo

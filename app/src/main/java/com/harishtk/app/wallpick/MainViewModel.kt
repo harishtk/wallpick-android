@@ -10,6 +10,7 @@ import com.harishtk.app.wallpick.data.entity.Photo
 import com.harishtk.app.wallpick.data.source.respository.WallpaperRepository
 import com.harishtk.app.wallpick.data.succeeded
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -17,6 +18,7 @@ import java.io.IOException
 import java.lang.Exception
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val repository: WallpaperRepository,
@@ -39,6 +41,7 @@ class MainViewModel @Inject constructor(
         val searches = actionStateFlow
             .filterIsInstance<UiAction.Search>()
             .distinctUntilChanged()
+            .debounce(300)
             .onStart { emit(UiAction.Search(query = lastQuery)) }
         val queriesScrolled = actionStateFlow
             .filterIsInstance<UiAction.Scroll>()
@@ -50,12 +53,23 @@ class MainViewModel @Inject constructor(
             )
             .onStart { emit(UiAction.Scroll(currentQuery = lastQueryScrolled)) }
 
+        val totalResults = actionStateFlow
+            .filterIsInstance<UiAction.UpdateTotalResults>()
+            .distinctUntilChanged()
+            .onStart { emit(UiAction.UpdateTotalResults(totalResults = 0)) }
+
         val favorited = actionStateFlow
             .filterIsInstance<UiAction.Favorite>()
             .map { uiAction -> addToFavorite(photo = uiAction.photo) }
 
         pagingDataFlow = searches
-            .flatMapLatest { searchRepo(queryString = it.query) }
+            .flatMapLatest {
+                searchRepo(queryString = it.query)
+                /*if (it.query.isEmpty()) {
+
+                } else {
+                }*/
+            }
             .cachedIn(viewModelScope)
 
         uiState = combine(
@@ -69,7 +83,7 @@ class MainViewModel @Inject constructor(
                 query = search.query,
                 lastQueryScrolled = scroll.currentQuery,
                 hasNotScrolledForCurrentSearch = search.query != scroll.currentQuery,
-                totalResults = totalResults
+                totalResults = totalResults.totalResults
             )
         }.stateIn(
             scope = viewModelScope,
@@ -89,7 +103,7 @@ class MainViewModel @Inject constructor(
 
     private fun searchRepo(queryString: String): Flow<PagingData<Photo>> =
         repository.getSearchPhotos(queryString).map {
-            it.map { photo -> totalResults.value = photo.totalResults;photo }
+            it.map { photo -> accept(UiAction.UpdateTotalResults(totalResults = photo.totalResults));photo }
         }
 
     override fun onCleared() {
@@ -103,6 +117,7 @@ sealed class UiAction {
     data class Search(val query: String) : UiAction()
     data class Scroll(val currentQuery: String) : UiAction()
     data class Favorite(val photo: Photo): UiAction()
+    data class UpdateTotalResults(val totalResults: Int): UiAction()
     object Retry : UiAction()
     object Refresh : UiAction()
 }
