@@ -59,12 +59,12 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import coil.compose.rememberImagePainter
 import coil.transform.RoundedCornersTransformation
-import com.harishtk.app.wallpick.data.entity.Photo
 import com.harishtk.app.wallpick.ui.screens.detail.DetailScreen
 import com.harishtk.app.wallpick.ui.screens.detail.DetailViewModel
 import com.harishtk.app.wallpick.ui.screens.favorites.FavoritesScreen
 import com.harishtk.app.wallpick.ui.theme.WallPickTheme
 import com.harishtk.app.wallpick.ui.widget.*
+import com.pexels.api.data.entity.Photo
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.AndroidEntryPoint

@@ -1,0 +1,69 @@
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin)
+    alias(libs.plugins.kapt)
+    alias(libs.plugins.hilt)
+}
+
+android {
+    namespace 'com.pexels.api'
+    compileSdk 33
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 33
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+
+    implementation(libs.bundles.lifecycle)
+    implementation(libs.bundles.room)
+    kapt(libs.androidx.room.compiler)
+
+    /* Paging 3 */
+    implementation(libs.androidx.paging)
+
+    /* Retrofit */
+    implementation(libs.retrofit2)
+    implementation(libs.retrofit2.converter.gson)
+    implementation(libs.retrofit2.converter.moshi) // 2.4.0
+
+    /* Okhttp */
+    implementation(libs.okhttp3)
+    implementation(libs.okhttp3.logging.interceptor)
+
+    /* Hilt */
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.android.compiler)
+    kapt(libs.androidx.hilt.compiler)
+
+    implementation(libs.timber)
+
+    testImplementation(libs.junit)
+    androidTestImplementation(testLibs.androidx.test.junitext)
+    androidTestImplementation(testLibs.androidx.test.espressoCore)
+}

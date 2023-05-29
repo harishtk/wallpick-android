@@ -4,17 +4,13 @@ import androidx.lifecycle.*
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
-import com.harishtk.app.wallpick.data.Result
-import com.harishtk.app.wallpick.data.entity.PhotosResponse
-import com.harishtk.app.wallpick.data.entity.Photo
-import com.harishtk.app.wallpick.data.source.respository.WallpaperRepository
-import com.harishtk.app.wallpick.data.succeeded
+import com.pexels.api.data.entity.Photo
+import com.pexels.api.domain.repository.WallpaperRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.io.IOException
 import java.lang.Exception
 import javax.inject.Inject
 

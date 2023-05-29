@@ -1,7 +1,5 @@
 package com.harishtk.app.wallpick.ui.screens.favorites
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -9,17 +7,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.paging.LoadState
 import androidx.paging.PagingData
@@ -27,13 +21,9 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import com.harishtk.app.wallpick.PhotoItem
-import com.harishtk.app.wallpick.PhotosList
 import com.harishtk.app.wallpick.UiAction
-import com.harishtk.app.wallpick.UiState
-import com.harishtk.app.wallpick.data.entity.Photo
-import com.harishtk.app.wallpick.ui.screens.favorites.FavoriteViewModel
+import com.pexels.api.data.entity.Photo
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.FlowCollector
 
 @Composable
 fun FavoritesScreen(navController: NavController, viewModel: FavoriteViewModel = hiltViewModel()) {

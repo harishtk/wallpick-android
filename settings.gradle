@@ -7,6 +7,15 @@ pluginManagement {
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    versionCatalogs {
+        /*libs {
+            from(files("gradle/libs.versions.toml"))
+        }*/
+        testLibs {
+            from(files("gradle/libs-test.versions.toml"))
+        }
+    }
+
     repositories {
         google()
         mavenCentral()
@@ -14,3 +23,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Wall Pick"
 include ':app'
+include ':pexels'

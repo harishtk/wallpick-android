@@ -3,10 +3,7 @@ package com.harishtk.app.wallpick.ui.screens.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.harishtk.app.wallpick.data.Result
-import com.harishtk.app.wallpick.data.entity.Photo
-import com.harishtk.app.wallpick.data.source.respository.WallpaperRepository
-import com.harishtk.app.wallpick.data.succeeded
+import com.pexels.api.domain.repository.WallpaperRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -19,6 +16,9 @@ import kotlinx.coroutines.flow.stateIn
 import java.lang.Exception
 import java.lang.IllegalStateException
 import javax.inject.Inject
+import com.pexels.api.data.Result
+import com.pexels.api.data.entity.Photo
+import com.pexels.api.data.succeeded
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DetailViewModel @AssistedInject constructor(

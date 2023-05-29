@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
-import com.harishtk.app.wallpick.data.entity.Photo
-import com.harishtk.app.wallpick.data.source.respository.WallpaperRepository
+import com.pexels.api.data.entity.Photo
+import com.pexels.api.domain.repository.WallpaperRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
